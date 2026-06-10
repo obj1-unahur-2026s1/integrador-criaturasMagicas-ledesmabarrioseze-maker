@@ -1,51 +1,32 @@
 class Criatura {
-
-  const property poderMagico
+  const astucia
+  var poderMagico
   var rol
-
+  method poderMagico() = poderMagico
+  method perder15DePoder() {
+    poderMagico = poderMagico * 0.85
+  }
   method poderOfensivo() {
 
     return poderMagico * 10 + rol.extra()
 
   }
-
   method esFormidable(){
      return self.esAstuta() or self.esExtraordinaria()
   }
-
   method esAstuta()
-
-  method astucia()
-
+  method astucia() = astucia
   method esExtraordinaria() {
-
     return rol.esExtraordinario(self)
   }
 
-  method cambiarADomadorCon(unaMascota){
-    if (rol == guardian && unaMascota.cuernos() && unaMascota.edad() ==1){
-      rol = Domador
-      rol.mascotas().agregarMascota(unaMascota)
-    }
+
+
+  method ritual() {
+    rol = rol.nuevoRolPorRitual()
   }
 
-  method cambiarAGuardian(){
-    if(rol == hechicero){
-      rol = guardian
-    }
-  }
 
-  method cambiarAHechicero(){
-    if (rol == Domador && rol.mascotas().any({m=> m.cuernos()})){
-      rol = hechicero
-    }
-    else {
-      self.error("no se pudo cambiar rol")
-    }
-
-  }
-
-  
 }
 
 
@@ -53,7 +34,6 @@ class Criatura {
 class Duende inherits Criatura {
 
   override method poderOfensivo() {
-
     return super() * 1.1
   }
 
@@ -74,7 +54,6 @@ class Duende inherits Criatura {
 class Hada inherits Criatura {
 
   var kilometrosQuePuedeVolar = 2
-  const property astucia
 
   method aumentarKilometros(unaCantidad) {
 
@@ -83,7 +62,6 @@ class Hada inherits Criatura {
   }
 
   override method esAstuta(){
-
     return astucia > 50
   }
 
@@ -106,11 +84,12 @@ object guardian {
   }
 
   method esExtraordinario(unaCriatura){
-
     return unaCriatura.poderMagico() > 50
-
   }
 
+  method nuevoRolPorRitual() {
+    return new Domador(mascotas=[new Mascota(edad=1, cuernos=false)])
+  }
 
 
 }
@@ -122,46 +101,79 @@ object hechicero {
   }
 
   method esExtraordinario(unaCriatura){
-
     return true
-
   }
-
+  method nuevoRolPorRitual() = guardian
 }
 
 class Domador {
 
-  const property mascotas = []
+  const mascotas = []
 
   method agregarMascota(unaMascota) {
-
     mascotas.add(unaMascota)
-
   }
 
   method quitarMascota(unaMascota) {
-
     mascotas.remove(unaMascota)
-
   }
 
   method extra() {
-    return 150 * mascotas.filter({m => m.cuernos()}).size()
+    //return 150 * mascotas.filter({m => m.cuernos()}).size()
+    return 150 * self.cantidadMascotasConCuernos()
   }
-
+  method cantidadMascotasConCuernos() = mascotas.count({m=>m.cuernos()})
   method esExtraordinario(unaCriatura){
-
     return unaCriatura.poderMagico() >= 15 && mascotas.all({m=> m.esVeterana()})
-
   }
 
+  method nuevoRolPorRitual() {
+    if(!self.cantidadMascotasConCuernos() > 0) 
+      self.error("No puede cambiar a hechicero porque alalalaa")
+    return hechicero
+  }
 }
 
 class Mascota {
-
-  var property edad
+  const edad
   const property cuernos
-  const property esVeterana
+  method esVeterana() = edad >= 10
 
 }
 
+class Colonia {
+  const criaturas = []
+
+  method poderOfensivo() = criaturas.sum({c=>c.poderOfensivo()})
+  method cantidadDeCriaturasFormidables() {
+    return criaturas.count({c=>c.esFormidable()})
+  }
+  method atacarA(unArea) {
+    if(self.poderOfensivo() > unArea.poderDefensivo()) 
+      unArea.esUsurpada(self)
+    else 
+      criaturas.forEach(
+        {
+          c => c.perder15DePoder()
+        }
+      )
+  }
+}
+
+class Area {
+  var colonia = new Colonia(criaturas=[])
+  method poderDefensivo()
+  method esUsurpada(unaColonia) {colonia = unaColonia}
+}
+
+class Castillo inherits Area {
+  override method poderDefensivo() {
+    return 200 * colonia.cantidadDeCriaturasFormidables()
+  }
+}
+
+class Claro inherits Area {
+  override method poderDefensivo() {
+    return 100 + colonia.poderOfensivo()
+  }
+}
